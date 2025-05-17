@@ -1,12 +1,15 @@
-
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import ProductCard, { Product } from '@/components/products/ProductCard';
 import ProductFilters, { FilterState } from '@/components/products/ProductFilters';
 import { Button } from '@/components/ui/button';
-import { Search } from 'lucide-react';
+import { Search, ShoppingCart } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { useCart } from '@/context/CartContext';
+import { useToast } from '@/components/ui/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 // Mock data
 const MOCK_PRODUCTS: Product[] = [
@@ -67,6 +70,9 @@ const MOCK_PRODUCTS: Product[] = [
 ];
 
 const Products: React.FC = () => {
+  const { addToCart, totalItems } = useCart();
+  const { toast } = useToast();
+  const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>(MOCK_PRODUCTS);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
@@ -123,6 +129,37 @@ const Products: React.FC = () => {
     setFilters(newFilters);
   };
 
+  const handleAddToCart = () => {
+    selectedProducts.forEach(productId => {
+      const product = products.find(p => p.id === productId);
+      if (product) {
+        addToCart(product);
+      }
+    });
+    
+    toast({
+      title: "Added to cart",
+      description: `${selectedProducts.length} item(s) added to your cart`,
+    });
+    
+    setSelectedProducts([]);
+  };
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0 }
+  };
+
   return (
     <div className="min-h-screen">
       <Navbar />
@@ -132,10 +169,10 @@ const Products: React.FC = () => {
           <div className="flex flex-col md:flex-row justify-between items-start mb-8">
             <div className="mb-6 md:mb-0">
               <h1 className="text-3xl font-bold mb-2">Products</h1>
-              <p className="text-muted-foreground">Browse our catalog of business solutions</p>
+              <p className="text-muted-foreground text-sm">Browse our catalog of business solutions</p>
             </div>
             
-            <div className="w-full md:w-auto flex items-center">
+            <div className="w-full md:w-auto flex items-center justify-between gap-4">
               <div className="relative flex-grow mr-2">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -145,9 +182,28 @@ const Products: React.FC = () => {
                   className="pl-9"
                 />
               </div>
-              <Button disabled={selectedProducts.length === 0} variant="outline">
-                Add to Cart ({selectedProducts.length})
-              </Button>
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="relative shadow-md hover:shadow-lg transition-shadow"
+                  onClick={() => navigate('/cart')}
+                >
+                  <ShoppingCart className="h-5 w-5" />
+                  {totalItems > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {totalItems}
+                    </span>
+                  )}
+                </Button>
+                <Button 
+                  disabled={selectedProducts.length === 0} 
+                  variant="outline"
+                  onClick={handleAddToCart}
+                >
+                  Add to Cart ({selectedProducts.length})
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -166,23 +222,42 @@ const Products: React.FC = () => {
 
             {/* Products Grid */}
             <div className="flex-grow">
-              {filteredProducts.length === 0 ? (
-                <div className="text-center py-12">
-                  <h3 className="text-lg font-medium mb-2">No products found</h3>
-                  <p className="text-muted-foreground">Try adjusting your filters or search query.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredProducts.map(product => (
-                    <ProductCard
-                      key={product.id}
-                      product={product}
-                      isSelected={selectedProducts.includes(product.id)}
-                      onToggleSelect={toggleProductSelection}
-                    />
-                  ))}
-                </div>
-              )}
+              <AnimatePresence mode="wait">
+                {filteredProducts.length === 0 ? (
+                  <motion.div
+                    key="no-products"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="text-center py-12"
+                  >
+                    <h3 className="text-lg font-medium mb-2">No products found</h3>
+                    <p className="text-muted-foreground">Try adjusting your filters or search query.</p>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="products-grid"
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="show"
+                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+                  >
+                    {filteredProducts.map(product => (
+                      <motion.div
+                        key={product.id}
+                        variants={itemVariants}
+                        layout
+                      >
+                        <ProductCard
+                          product={product}
+                          isSelected={selectedProducts.includes(product.id)}
+                          onToggleSelect={toggleProductSelection}
+                        />
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </div>
