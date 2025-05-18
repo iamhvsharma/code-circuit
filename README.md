@@ -1,6 +1,6 @@
 # Code Circuit Project
 
-### Track - Business# Horizon - Business Management Platform
+# Horizon - Business Management Platform
 
 [Demo Video Link](https://www.loom.com/share/d5cd74e8121a4d80813fe1e56a79daac?sid=b7820873-28b0-489a-a533-c87f69eb5056)
 
